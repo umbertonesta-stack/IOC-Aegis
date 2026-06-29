@@ -1,55 +1,94 @@
-# <Nome del progetto>
+# IOC-Aegis
 
-> Sostituisci questo README con quello del tuo progetto. Le istruzioni qui sotto sono il
-> minimo: cosa fa, come si installa, come si avvia, come si lanciano i test.
+Aggregatore di threat intelligence da riga di comando. Dato un IP o un URL, interroga in
+tempo reale più sorgenti (es. AbuseIPDB, URLhaus), aggrega i verdetti assegnando uno score
+e classificando la minaccia, e su una lista di indicatori esporta quelli malevoli in
+formati pronti per firewall o SIEM.
 
-## Cosa fa
+## Requisiti
 
-Tre-cinque righe a parole tue. Se non riesci a riassumerlo, non l'hai ancora capito.
+- Python 3.11+
+- Un account gratuito su [AbuseIPDB](https://www.abuseipdb.com/) per ottenere una API key
 
-## Membri del gruppo
+## Installazione da zero (PC pulito)
 
-- Nome Cognome — handle GitHub
-- Nome Cognome — handle GitHub
+Tutti i comandi vanno eseguiti nella cartella del progetto, da terminale.
 
-Corso: Programmazione Python — Cybersecurity Specialist.
+### 1. Crea e attiva l'ambiente virtuale
 
-## Installazione
+L'ambiente virtuale (`.venv`) isola le dipendenze del progetto dal Python di sistema.
 
 ```bash
-git clone <URL-del-vostro-repo>
-cd <nome-cartella>
-python -m venv .venv && source .venv/bin/activate   # consigliato
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Dopo l'attivazione il prompt mostra `(.venv)`. Da questo momento `python` e `pip` puntano
+all'ambiente isolato.
+
+> Su Windows l'attivazione è: `.venv\Scripts\activate`
+
+### 2. Installa le dipendenze
+
+```bash
 pip install -r requirements.txt
 ```
 
-Richiede **Python 3.11+**.
+### 3. Configura la chiave API
 
-## Come si usa
-
-```bash
-python -m progetto --help
-```
-
-(Sostituisci `progetto` con il nome reale del tuo pacchetto. Vedi `docs/manuale-utente.md`
-per la guida completa.)
-
-## Test
+Le chiavi non sono versionate. Copia il file di esempio e inserisci la tua chiave reale:
 
 ```bash
-pytest
+cp .env.example .env
 ```
 
-## Struttura del repository
+Apri `.env` con un editor e sostituisci il placeholder con la tua chiave AbuseIPDB:
 
 ```
-.
-├── src/progetto/      ← SORGENTE: il codice del programma
-├── tests/             ← test pytest
-├── docs/              ← METAINFORMAZIONI: documentazione, proposta, devlog, uso IA
-├── requirements.txt
+ABUSEIPDB_API_KEY=la_tua_chiave_qui
+```
+
+La chiave si ottiene da: account AbuseIPDB → scheda **API** → *Create Key*.
+
+> Il file `.env` è ignorato da git e non deve mai essere committato.
+
+## Uso rapido
+
+```bash
+# Controlla un singolo IP
+python -m ioc_aegis check 8.8.8.8
+
+# Analizza una lista ed esporta gli indicatori sopra una soglia di severità
+python -m ioc_aegis scan indicatori.txt --min-severity 80 --export csv --out blocklist.csv
+```
+
+*(I comandi esatti sono indicativi e verranno completati durante lo sviluppo.)*
+
+## Sessioni successive
+
+L'ambiente virtuale non resta attivo tra una sessione e l'altra. A ogni nuovo terminale:
+
+```bash
+source .venv/bin/activate
+```
+
+Per uscirne: `deactivate`.
+
+## Struttura del progetto
+
+```
+ioc-aegis/
+├── src/ioc_aegis/      # codice sorgente
+├── tests/              # test pytest (con fixture per la demo offline)
+├── docs/               # proposta, manuali, devlog
+├── .env.example        # template delle variabili d'ambiente (versionato)
+├── requirements.txt    # dipendenze esterne
 └── README.md
 ```
 
-Approfondimenti in `docs/manuale-tecnico.md` (architettura) e `docs/architettura` (gerarchia
-delle classi).
+## Note
+
+- Le dipendenze esterne sono in `requirements.txt`; i moduli della libreria standard
+  (`ipaddress`, `re`, `csv`, `json`, `argparse`, `abc`) non vanno dichiarati.
+- L'account gratuito AbuseIPDB ha un limite di 1.000 controlli al giorno: la cache locale
+  riduce le chiamate ripetute.

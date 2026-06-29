@@ -7,3 +7,6 @@
 #
 # Sempre utile per i test:
 pytest
+requests
+python-dotenv
+EOF
