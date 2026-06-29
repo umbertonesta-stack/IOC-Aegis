@@ -1,0 +1,9 @@
+# Dipendenze del progetto. Aggiungi solo ciò che usi davvero.
+# Esempi tipici a seconda del tema:
+#   requests        # richieste HTTP / API / bot
+#   paramiko        # automazione SSH
+#   cryptography    # cifrari moderni (Fernet, ecc.)
+#   beautifulsoup4  # web scraping
+#
+# Sempre utile per i test:
+pytest
