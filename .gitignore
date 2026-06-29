@@ -1,0 +1,50 @@
+# === Segreti e configurazione locale ===
+.env
+.env.*
+!.env.example
+*.key
+config.local.*
+
+# === Cache locale del progetto (IOC-Aegis) ===
+# NB: le fixture di risposte reali per demo/test vanno versionate:
+#     tienile in tests/fixtures/ e NON in questa cartella.
+cache/
+*.cache
+
+# === Output generati (export firewall/SIEM) ===
+out/
+*.blocklist
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# === Virtual environment ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Test e coverage ===
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# === IDE / editor ===
+.vscode/
+.idea/
+*.swp
+*~
+
+# === OS ===
+.DS_Store
+Thumbs.db
