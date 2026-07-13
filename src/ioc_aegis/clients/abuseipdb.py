@@ -26,10 +26,10 @@ class AbuseIPDBClient:
             data=response.json().get("data",{})
             
             if not data:
-                    print(f"[!] Nessun dato restituito per l'IP {ip_address}")
+                    print(f"! Nessun dato restituito per l'IP {ip_address}")
                     return None
 
-                # 6. Compiliamo il "fascicolo" passandogli i dati grezzi
+                
             ioc = IpIOC(
                 value=data["ipAddress"],
                 source="AbuseIPDB",
