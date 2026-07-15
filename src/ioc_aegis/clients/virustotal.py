@@ -28,7 +28,11 @@ class VirusTotalClient:
             )
             
             if response.status_code == 404:
+<<<<<<< HEAD
                 print(f"- Hash {file_hash} sconosciuto per VirusTotal (Mai visto prima).")
+=======
+                print(f"[-] Hash {file_hash} sconosciuto per VirusTotal (Mai visto prima).")
+>>>>>>> 1bede5efe2f0d3ba89c3264e934e454a49816ed2
                 return None
                 
             response.raise_for_status()
@@ -50,8 +54,16 @@ class VirusTotalClient:
             return ioc
             
         except requests.exceptions.RequestException as e:
+<<<<<<< HEAD
             print(f"! Errore di connessione a VirusTotal: {e}")
             return None
         except ValueError as e:
             print(f"! I dati ricevuti da VirusTotal hanno fallito i test di sicurezza del modello: {e}")
+=======
+            print(f"[!] Errore di connessione a VirusTotal: {e}")
+            return None
+        except ValueError as e:
+            # Questo except cattura i `raise ValueError` che hai scritto tu nel fileioc.py!
+            print(f"[!] I dati ricevuti da VirusTotal hanno fallito i test di sicurezza del modello: {e}")
+>>>>>>> 1bede5efe2f0d3ba89c3264e934e454a49816ed2
             return None
