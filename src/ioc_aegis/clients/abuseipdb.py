@@ -16,20 +16,20 @@ class AbuseIPDBClient:
 
     def check_ip(self, ip_address: str) -> IpIOC | None:
         params={
-            "ipaddress":ip_address,
+            "ipAddress":ip_address,
             "maxAgeInDays":90
         }
         try:
-            response=request.get(url=self.base_url,headers=self.headers,params=params,timeout=10)
+            response=requests.get(url=self.base_url,headers=self.headers,params=params,timeout=10)
             
             response.raise_for_status()
             data=response.json().get("data",{})
             
             if not data:
-                    print(f"[!] Nessun dato restituito per l'IP {ip_address}")
+                    print(f"! Nessun dato restituito per l'IP {ip_address}")
                     return None
 
-                # 6. Compiliamo il "fascicolo" passandogli i dati grezzi
+                
             ioc = IpIOC(
                 value=data["ipAddress"],
                 source="AbuseIPDB",

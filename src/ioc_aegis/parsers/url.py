@@ -1,8 +1,7 @@
-from .base import IOC
+from parsers.base import IOC
 
 
 class UrlIOC(IOC):
-    """Indicatore di tipo URL, valutato tramite la sorgente URLhaus (abuse.ch)."""
 
     def __init__(
         self,

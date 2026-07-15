@@ -1,3 +1,13 @@
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+from clients.abuseipdb import AbuseIPDBClient
+from clients.urlhaus import URLhausClient
+from clients.virustotal import VirusTotalClient
+
 
 def mostra_menu():
     print("\n=== IOC-AEGIS PANELLO DI CONTROLLO ===")
@@ -33,8 +43,27 @@ def main():
                     if sub_scelta in ("1", "2", "3", "4"):
                         elemento = input("Incolla l'elemento da scansionare: ").strip()
                         print(f"\nContatto API e verifica in corso per: {elemento}...")
-                        print("Verdetto: Analisi completata.")
-                        print(" -> [LOG] Ricerca salvata in cronologia.")
+                        risultato=None
+                        if sub_scelta== "1":
+                            client=AbuseIPDBClient()
+                            risultato=client.check_ip(elemento)
+                            
+                        elif sub_scelta=="2":
+                            client=URLhausClient()
+                            risultato=client.check_url(elemento)
+                        elif sub_scelta=="3": 
+                            print("non implementato")
+                        elif sub_scelta=="4":
+                            client=VirusTotalClient()
+                            risultato=client.check_hash(elemento)
+
+                        if risultato!=None:
+                            print("Verdetto: Analisi completata.")
+                            print(" ->  Ricerca salvata in cronologia.")
+                            print(f"    Fonte: {risultato.source}")
+                            print(f"    Target: {risultato.value}")
+                            print(f"    Indice di Pericolosità: {risultato.get_severity_score()}%")
+
                     else:
                         print("! Opzione non valida. Riprova.")
 
