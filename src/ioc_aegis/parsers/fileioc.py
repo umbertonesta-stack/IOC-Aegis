@@ -1,4 +1,4 @@
-from parsers.base import IOC
+from .base import IOC
 
 class FileIOC(IOC):
     def __init__(self, value: str, source: str, malicious_votes: int, total_votes: int):

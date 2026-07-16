@@ -1,4 +1,4 @@
-from parsers.base import IOC
+from .base import IOC
 
 
 class UrlIOC(IOC):
