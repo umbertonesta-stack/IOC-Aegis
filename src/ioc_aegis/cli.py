@@ -7,6 +7,7 @@ from .cache import Cache
 from .clients.abuseipdb import AbuseIPDBClient
 from .clients.urlhaus import URLhausClient
 from .clients.virustotal import VirusTotalClient
+from .clients.alienvault import AlienVaultClient
 
 # Le chiavi API vengono lette dal file .env prima di istanziare i client.
 load_dotenv()
@@ -70,24 +71,46 @@ def gestisci_analisi(clients: dict, cache: Cache):
             print("! Opzione non valida. Riprova.")
             continue
 
-        if sub_scelta == "3":
-            print("\nAnalisi di mail e domini non ancora implementata.")
-            continue
-
+        # --- CORREZIONE: Richiesta input inserita al posto giusto ---
         elemento = input("Incolla l'elemento da scansionare: ").strip()
         if not elemento:
             print("! Nessun elemento inserito.")
             continue
+        # ------------------------------------------------------------
+
+        if sub_scelta == "3" and "@" in elemento:
+            dominio = elemento.split("@")[1]
+            print(f"[*] Email rilevata. Analizzo il dominio estratto: {dominio}")
+            elemento = dominio # Sostituiamo l'elemento col dominio pulito
 
         print(f"\nVerifica in corso per: {elemento}...")
-
+            
         risultato = None
+        
+        # Instradamento sicuro ai vari client
         if sub_scelta == "1":
-            risultato = clients["ip"].check_ip(elemento)
+            if "ip" in clients:
+                risultato = clients["ip"].check_ip(elemento)
+            else:
+                print("! Client AbuseIPDB non configurato.")
+                
         elif sub_scelta == "2":
-            risultato = clients["url"].check_url(elemento)
+            if "url" in clients:
+                risultato = clients["url"].check_url(elemento)
+            else:
+                print("! Client URLhaus non configurato.")
+                
+        elif sub_scelta == "3":
+            if "domain" in clients:
+                risultato = clients["domain"].check_domain(elemento)
+            else:
+                print("! Impossibile analizzare: AlienVault non e' configurato (manca API Key in .env).")
+                
         elif sub_scelta == "4":
-            risultato = clients["hash"].check_hash(elemento)
+            if "hash" in clients:
+                risultato = clients["hash"].check_hash(elemento)
+            else:
+                print("! Client VirusTotal non configurato.")
 
         if risultato is not None:
             mostra_risultato(risultato)
@@ -96,8 +119,7 @@ def gestisci_analisi(clients: dict, cache: Cache):
 
 
 def main():
-    # Una sola istanza di Cache, condivisa da tutti i client: istanze separate
-    # che puntano allo stesso file si sovrascriverebbero a vicenda.
+    
     cache = Cache()
 
     # I client vengono creati una volta sola all'avvio, non a ogni ricerca.
@@ -108,6 +130,7 @@ def main():
         ("ip", AbuseIPDBClient, "AbuseIPDB"),
         ("url", URLhausClient, "URLhaus"),
         ("hash", VirusTotalClient, "VirusTotal"),
+        ("domain", AlienVaultClient, "AlienVault OTX"),
     ):
         try:
             clients[nome] = classe(cache=cache)
@@ -128,8 +151,8 @@ def main():
                 print(f"[non ancora implementato] Esportazione con soglia {soglia}.")
 
             case "3":
-                print("\n[non ancora implementato] Elenco degli hash malware noti.")
-
+                print("\nRicerca per Hash File / Malware Noti ")
+                
             case "4":
                 mostra_cronologia(cache)
 
@@ -143,3 +166,6 @@ def main():
 
             case _:
                 print("! Opzione non valida. Riprova.")
+
+if __name__ == "__main__":
+    main()
