@@ -9,12 +9,6 @@ from ..parsers.url import UrlIOC
 
 
 class URLhausClient:
-    """Interroga URLhaus e restituisce un UrlIOC, oppure None.
-
-    A differenza di AbuseIPDB (GET + query string), URLhaus usa POST con body
-    form-encoded. Lo score non viene calcolato qui ma in UrlIOC, che lo deriva
-    da url_status.
-    """
 
     SORGENTE = "URLhaus"
     ENDPOINT = "https://urlhaus-api.abuse.ch/v1/url/"
@@ -51,22 +45,15 @@ class URLhausClient:
             query_status = data.get("query_status")
 
             if query_status == "no_results":
-                # L'URL non e' nel database. Si memorizza il negativo per non
-                # ripetere la richiesta, ma si tenga presente che assenza di
-                # prove non e' prova di assenza: URLhaus copre solo cio' che e'
-                # stato segnalato.
                 self.cache.set(self.SORGENTE, url_address, Cache.NESSUN_RISULTATO)
                 print("URL non presente nel database URLhaus (nessuna evidenza).")
                 return None
 
             if query_status != "ok":
-                # Contratto dell'API cambiato o risposta anomala: non si
-                # memorizza nulla, perche' non e' un esito affidabile.
+
                 print(f"Risposta anomala da URLhaus (query_status: {query_status}).")
                 return None
 
-            # 3. Si memorizzano i soli campi usati da UrlIOC: payloads e
-            #    blacklists restano fuori.
             da_salvare = {
                 "query_status": query_status,
                 "url_status": data.get("url_status", "unknown"),

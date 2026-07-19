@@ -1,9 +1,3 @@
-"""Test unitari sulla gerarchia degli indicatori (IOC) e sul loro scoring.
-
-Gli IOC sono oggetti puri: il calcolo dello score non dipende dalla rete, quindi
-questi test girano offline e sono deterministici.
-"""
-
 import pytest
 
 from ioc_aegis.parsers.base import IOC
@@ -16,7 +10,7 @@ from ioc_aegis.parsers.domain import DomainIOC
 # --- Classe base: validazione comune ---
 
 def test_ioc_e_astratta():
-    """IOC non deve essere istanziabile direttamente (metodo astratto)."""
+
     with pytest.raises(TypeError):
         IOC("valore", "sorgente")
 
