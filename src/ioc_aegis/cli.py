@@ -9,6 +9,8 @@ from .clients.urlhaus import URLhausClient
 from .clients.virustotal import VirusTotalClient
 from .clients.alienvault import AlienVaultClient
 
+from .export import export_to_csv
+
 # Le chiavi API vengono lette dal file .env prima di istanziare i client.
 load_dotenv()
 
@@ -59,7 +61,7 @@ def mostra_cronologia(cache: Cache):
         print(f"  [{quando}] {voce['indicatore']} ({voce['sorgente']}) - {esito}")
 
 
-def gestisci_analisi(clients: dict, cache: Cache):
+def gestisci_analisi(clients: dict, cache: Cache, session_results: list):
     """Ciclo del sottomenu di analisi di un singolo indicatore."""
     while True:
         sub_scelta = sottomenu_analisi()
@@ -87,7 +89,7 @@ def gestisci_analisi(clients: dict, cache: Cache):
             
         risultato = None
         
-        # Instradamento sicuro ai vari client
+   
         if sub_scelta == "1":
             if "ip" in clients:
                 risultato = clients["ip"].check_ip(elemento)
@@ -114,14 +116,24 @@ def gestisci_analisi(clients: dict, cache: Cache):
 
         if risultato is not None:
             mostra_risultato(risultato)
-        # Se il risultato e' None il client ha gia' spiegato il motivo
-        # (nessun dato, errore di rete, chiave mancante...).
+            mappa_tipi = {"1": "IP", "2": "URL", "3": "Dominio", "4": "Hash"}
+            
+            # Prepariamo il dizionario con le stesse chiavi del tuo headers in export.py
+            score = risultato.get_severity_score()
+            risultato_standard = {
+                "Fonte": risultato.source,
+                "Target": risultato.value,
+                "Pericolosita": f"{risultato.get_severity_score()}%"
+            }
+            
+            # Salviamo il risultato nella lista
+            session_results.append(risultato_standard)
 
 
 def main():
     
     cache = Cache()
-
+    session_results = []
     # I client vengono creati una volta sola all'avvio, non a ogni ricerca.
     # Se una chiave API manca, il client corrispondente non viene istanziato ma
     # gli altri restano utilizzabili.
@@ -143,13 +155,17 @@ def main():
 
         match scelta:
             case "1":
-                gestisci_analisi(clients, cache)
+               gestisci_analisi(clients, cache, session_results)
 
             case "2":
                 print("\nGenerazione regole di esportazione per la difesa attiva...")
-                soglia = input("Inserisci soglia minima di score per il blocco (es. 80): ").strip()
-                print(f"[non ancora implementato] Esportazione con soglia {soglia}.")
-
+                if not session_results:
+                        print("! Nessun dato in sessione da esportare. Fai prima una scansione.")
+                else:
+                    export_to_csv(session_results)
+                    print(f"[*] {len(session_results)} record esportati con successo.")
+                    session_results.clear()
+                    print("[*] La memoria di sessione e' stata svuotata per evitare duplicati.")
             case "3":
                 print("\nRicerca per Hash File / Malware Noti ")
                 
@@ -161,6 +177,11 @@ def main():
                 print("[non ancora implementato] Scansione di file di log.")
 
             case "0":
+                if len(session_results) > 0:
+                    print(f"\n[*] Esportazione di {len(session_results)} record in corso prima di uscire...")
+                    export_to_csv(session_results)
+                    print("[*] Esportazione completata con successo.")
+                
                 print("\nChiusura di IOC-Aegis. Arrivederci!")
                 break
 
