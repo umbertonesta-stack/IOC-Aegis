@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"---exit $?\")",
+      "Bash(git check-ignore *)",
+      "Bash(PYTHONPATH=src timeout 15 .venv/bin/python -m ioc_aegis)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Bash(PYTHONPATH=/mnt/c/Users/umber/Desktop/IOC-Aegis-aggiornato/IOC-Aegis/src timeout 10 /mnt/c/Users/umber/Desktop/IOC-Aegis-aggiornato/IOC-Aegis/.venv/bin/python -m ioc_aegis)",
+      "Bash(PYTHONPATH=src .venv/bin/python -m pytest -v)",
+      "Bash(echo \"PYTEST_EXIT=$?\")",
+      "Bash(/mnt/c/Users/umber/Desktop/IOC-Aegis-aggiornato/IOC-Aegis/.venv/bin/python --version)",
+      "Bash(PYTHONPATH=src timeout 20 .venv/bin/python -m ioc_aegis)"
+    ]
+  }
+}

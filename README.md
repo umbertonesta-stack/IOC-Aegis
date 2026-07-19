@@ -1,14 +1,21 @@
 # IOC-Aegis
 
-Aggregatore di threat intelligence da riga di comando. Dato un IP o un URL, interroga in
-tempo reale più sorgenti (es. AbuseIPDB, URLhaus), aggrega i verdetti assegnando uno score
-e classificando la minaccia, e su una lista di indicatori esporta quelli malevoli in
-formati pronti per firewall o SIEM.
+Aggregatore di threat intelligence da riga di comando. Dato un IP, un URL o un hash di file,
+interroga in tempo reale piu' sorgenti (AbuseIPDB, URLhaus, VirusTotal), assegna a ciascun
+indicatore uno score di pericolosita' 0-100 e classifica la minaccia. Le risposte vengono
+memorizzate in una cache locale per ridurre le chiamate alle API e permettere l'analisi
+anche offline.
 
 ## Requisiti
 
 - Python 3.11+
-- Un account gratuito su [AbuseIPDB](https://www.abuseipdb.com/) per ottenere una API key
+- Account gratuiti per ottenere le chiavi API:
+  - [AbuseIPDB](https://www.abuseipdb.com/) — reputazione degli IP
+  - [abuse.ch](https://auth.abuse.ch/) — Auth-Key per URLhaus
+  - [VirusTotal](https://www.virustotal.com/) — verdetti antivirus sugli hash
+
+> Le chiavi sono opzionali una per una: se ne manca una, la sorgente corrispondente viene
+> disattivata all'avvio ma le altre restano utilizzabili.
 
 ## Installazione da zero (PC pulito)
 
@@ -26,43 +33,52 @@ source .venv/bin/activate
 Dopo l'attivazione il prompt mostra `(.venv)`. Da questo momento `python` e `pip` puntano
 all'ambiente isolato.
 
-> Su Windows l'attivazione è: `.venv\Scripts\activate`
+> **Windows:** l'attivazione e' `.venv\Scripts\activate`
+>
+> **Debian/Ubuntu/WSL:** se il comando `venv` fallisce, installa prima il pacchetto:
+> `sudo apt install python3-venv`
 
 ### 2. Installa le dipendenze
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-### 3. Configura la chiave API
+### 3. Configura le chiavi API
 
-Le chiavi non sono versionate. Copia il file di esempio e inserisci la tua chiave reale:
+Le chiavi non sono versionate. Copia il file di esempio e inserisci le tue chiavi reali:
 
 ```bash
 cp .env.example .env
 ```
 
-Apri `.env` con un editor e sostituisci il placeholder con la tua chiave AbuseIPDB:
+Apri `.env` con un editor e compila le variabili:
 
 ```
 ABUSEIPDB_API_KEY=la_tua_chiave_qui
+URLHAUS_API_KEY=la_tua_chiave_qui
+VIRUSTOTAL_API_KEY=la_tua_chiave_qui
 ```
 
-La chiave si ottiene da: account AbuseIPDB → scheda **API** → *Create Key*.
+> Il file `.env` e' ignorato da git e non deve mai essere committato.
 
-> Il file `.env` è ignorato da git e non deve mai essere committato.
-
-## Uso rapido
+### 4. Avvia il programma
 
 ```bash
-# Controlla un singolo IP
-python -m ioc_aegis check 8.8.8.8
-
-# Analizza una lista ed esporta gli indicatori sopra una soglia di severità
-python -m ioc_aegis scan indicatori.txt --min-severity 80 --export csv --out blocklist.csv
+PYTHONPATH=src python -m ioc_aegis
 ```
 
-*(I comandi esatti sono indicativi e verranno completati durante lo sviluppo.)*
+Si apre un menu interattivo da cui scegliere il tipo di analisi.
+
+## Uso
+
+All'avvio compare il menu principale. La voce **1. Analizza Singolo Elemento** apre un
+sottomenu per scegliere il tipo di indicatore (IP, URL, hash file). Inserito l'indicatore,
+il programma interroga la sorgente corrispondente (o la cache, se il dato e' recente) e
+mostra fonte, target e indice di pericolosita'.
+
+La voce **4. Mostra Cronologia Investigazioni** elenca le ultime ricerche effettuate,
+comprese quelle senza esito.
 
 ## Sessioni successive
 
@@ -77,18 +93,27 @@ Per uscirne: `deactivate`.
 ## Struttura del progetto
 
 ```
-ioc-aegis/
-├── src/ioc_aegis/      # codice sorgente
-├── tests/              # test pytest (con fixture per la demo offline)
-├── docs/               # proposta, manuali, devlog
-├── .env.example        # template delle variabili d'ambiente (versionato)
-├── requirements.txt    # dipendenze esterne
+IOC-Aegis/
+├── src/ioc_aegis/
+│   ├── __main__.py       # entry point (python -m ioc_aegis)
+│   ├── cli.py            # menu interattivo
+│   ├── cache.py          # cache locale delle risposte (JSON, con TTL)
+│   ├── engine.py         # IngestionEngine: filtro per soglia di severita'
+│   ├── parsers/          # gerarchia IOC: base + IpIOC, UrlIOC, FileIOC
+│   └── clients/          # client HTTP: AbuseIPDB, URLhaus, VirusTotal
+├── tests/                # test pytest
+├── docs/                 # proposta, manuali, devlog, scelte
+├── .env.example          # template delle variabili d'ambiente (versionato)
+├── requirements.txt      # dipendenze esterne
 └── README.md
 ```
 
 ## Note
 
 - Le dipendenze esterne sono in `requirements.txt`; i moduli della libreria standard
-  (`ipaddress`, `re`, `csv`, `json`, `argparse`, `abc`) non vanno dichiarati.
-- L'account gratuito AbuseIPDB ha un limite di 1.000 controlli al giorno: la cache locale
-  riduce le chiamate ripetute.
+  (`ipaddress`, `re`, `csv`, `json`, `abc`) non vanno dichiarati.
+- Le sorgenti gratuite hanno limiti di quota (AbuseIPDB: 1.000 controlli/giorno;
+  VirusTotal: 4 richieste/minuto): la cache locale riduce le chiamate ripetute ed evita di
+  esaurire i limiti durante l'uso.
+- La cache viene salvata in `cache/` (esclusa dal versionamento) con una scadenza di 6 ore
+  per voce.

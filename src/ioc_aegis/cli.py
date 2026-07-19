@@ -8,7 +8,6 @@ from .clients.abuseipdb import AbuseIPDBClient
 from .clients.urlhaus import URLhausClient
 from .clients.virustotal import VirusTotalClient
 from .clients.alienvault import AlienVaultClient
-
 from .export import export_to_csv
 
 # Le chiavi API vengono lette dal file .env prima di istanziare i client.
@@ -19,9 +18,7 @@ def mostra_menu():
     print("\n=== IOC-AEGIS PANNELLO DI CONTROLLO ===")
     print("1. Analizza Singolo Elemento (Input)")
     print("2. Esporta per Firewall e SIEM")
-    print("3. Mostra Hash File / Malware Noti")
-    print("4. Mostra Cronologia Investigazioni")
-    print("5. Scansiona File di Log (Regex Scanner)")
+    print("3. Mostra Cronologia Investigazioni")
     print("0. Esci")
 
 
@@ -54,10 +51,7 @@ def mostra_cronologia(cache: Cache):
     print(f"\n--- CRONOLOGIA ({len(voci)} ricerche piu' recenti) ---")
     for voce in voci:
         quando = datetime.fromisoformat(voce["salvata_il"]).strftime("%d/%m/%Y %H:%M")
-        if voce["senza_risultato"]:
-            esito = "nessun risultato"
-        else:
-            esito = "dati disponibili"
+        esito = "nessun risultato" if voce["senza_risultato"] else "dati disponibili"
         print(f"  [{quando}] {voce['indicatore']} ({voce['sorgente']}) - {esito}")
 
 
@@ -73,41 +67,35 @@ def gestisci_analisi(clients: dict, cache: Cache, session_results: list):
             print("! Opzione non valida. Riprova.")
             continue
 
-        # --- CORREZIONE: Richiesta input inserita al posto giusto ---
         elemento = input("Incolla l'elemento da scansionare: ").strip()
         if not elemento:
             print("! Nessun elemento inserito.")
             continue
-        # ------------------------------------------------------------
 
+        # Se e' un'email, si analizza il dominio dopo la @.
         if sub_scelta == "3" and "@" in elemento:
             dominio = elemento.split("@")[1]
             print(f"[*] Email rilevata. Analizzo il dominio estratto: {dominio}")
-            elemento = dominio # Sostituiamo l'elemento col dominio pulito
+            elemento = dominio
 
         print(f"\nVerifica in corso per: {elemento}...")
-            
+
         risultato = None
-        
-   
         if sub_scelta == "1":
             if "ip" in clients:
                 risultato = clients["ip"].check_ip(elemento)
             else:
                 print("! Client AbuseIPDB non configurato.")
-                
         elif sub_scelta == "2":
             if "url" in clients:
                 risultato = clients["url"].check_url(elemento)
             else:
                 print("! Client URLhaus non configurato.")
-                
         elif sub_scelta == "3":
             if "domain" in clients:
                 risultato = clients["domain"].check_domain(elemento)
             else:
-                print("! Impossibile analizzare: AlienVault non e' configurato (manca API Key in .env).")
-                
+                print("! AlienVault non configurato (manca API Key in .env).")
         elif sub_scelta == "4":
             if "hash" in clients:
                 risultato = clients["hash"].check_hash(elemento)
@@ -116,29 +104,23 @@ def gestisci_analisi(clients: dict, cache: Cache, session_results: list):
 
         if risultato is not None:
             mostra_risultato(risultato)
-            mappa_tipi = {"1": "IP", "2": "URL", "3": "Dominio", "4": "Hash"}
-            
-            # Prepariamo il dizionario con le stesse chiavi del tuo headers in export.py
-            score = risultato.get_severity_score()
-            risultato_standard = {
+            # Si conserva il risultato in sessione per l'eventuale esportazione.
+            session_results.append({
                 "Fonte": risultato.source,
                 "Target": risultato.value,
-                "Pericolosita": f"{risultato.get_severity_score()}%"
-            }
-            
-            # Salviamo il risultato nella lista
-            session_results.append(risultato_standard)
+                "Pericolosita": f"{risultato.get_severity_score()}%",
+            })
 
 
 def main():
-    
     cache = Cache()
     session_results = []
-    # I client vengono creati una volta sola all'avvio, non a ogni ricerca.
+
+    # I client vengono creati una volta sola all'avvio, condividendo la cache.
     # Se una chiave API manca, il client corrispondente non viene istanziato ma
     # gli altri restano utilizzabili.
     clients = {}
-    for nome, classe, metodo in (
+    for nome, classe, etichetta in (
         ("ip", AbuseIPDBClient, "AbuseIPDB"),
         ("url", URLhausClient, "URLhaus"),
         ("hash", VirusTotalClient, "VirusTotal"),
@@ -147,46 +129,40 @@ def main():
         try:
             clients[nome] = classe(cache=cache)
         except ValueError as e:
-            print(f"[avviso] {metodo} non disponibile: {e}")
+            print(f"[avviso] {etichetta} non disponibile: {e}")
 
     while True:
         mostra_menu()
-        scelta = input("Seleziona un'opzione (0-5): ").strip()
+        scelta = input("Seleziona un'opzione (0-3): ").strip()
 
         match scelta:
             case "1":
-               gestisci_analisi(clients, cache, session_results)
+                gestisci_analisi(clients, cache, session_results)
 
             case "2":
                 print("\nGenerazione regole di esportazione per la difesa attiva...")
                 if not session_results:
-                        print("! Nessun dato in sessione da esportare. Fai prima una scansione.")
+                    print("! Nessun dato in sessione da esportare. Fai prima una scansione.")
                 else:
                     export_to_csv(session_results)
                     print(f"[*] {len(session_results)} record esportati con successo.")
                     session_results.clear()
-                    print("[*] La memoria di sessione e' stata svuotata per evitare duplicati.")
+                    print("[*] Memoria di sessione svuotata per evitare duplicati.")
+
             case "3":
-                print("\nRicerca per Hash File / Malware Noti ")
-                
-            case "4":
                 mostra_cronologia(cache)
 
-            case "5":
-                print("\n--- REGEX LOG SCANNER ---")
-                print("[non ancora implementato] Scansione di file di log.")
-
             case "0":
-                if len(session_results) > 0:
-                    print(f"\n[*] Esportazione di {len(session_results)} record in corso prima di uscire...")
+                if session_results:
+                    print(f"\n[*] Esportazione di {len(session_results)} record prima di uscire...")
                     export_to_csv(session_results)
-                    print("[*] Esportazione completata con successo.")
-                
+                    print("[*] Esportazione completata.")
                 print("\nChiusura di IOC-Aegis. Arrivederci!")
                 break
 
             case _:
                 print("! Opzione non valida. Riprova.")
+
 
 if __name__ == "__main__":
     main()
